@@ -1,0 +1,25 @@
+<h2>Select Credential and DID to Present</h2>
+<form method="post" action="/present">
+  <input type="hidden" name="credential_offer_uri" value="{{ credential_offer_uri }}">
+  <input type="hidden" name="state" value="{{ state }}">
+
+  <label>Credential:</label>
+  <select name="credential_label">
+    {% for cred in credentials %}
+    <option value="{{ cred.label }}">
+      {{ cred.label }}
+    </option>
+    {% endfor %}
+  </select>
+
+  <label>DID:</label>
+  <select name="holder_label">
+    {% for did in dids %}
+    <option value="{{ did.label }}">
+      {{ did.label }}
+    </option>
+    {% endfor %}
+  </select>
+
+  <button type="submit">Submit Presentation</button>
+</form>

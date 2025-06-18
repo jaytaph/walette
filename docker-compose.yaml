@@ -1,0 +1,43 @@
+services:
+  issuer:
+    build: ./walette-issuer
+    ports:
+      - "8050:8000"
+    volumes:
+      - ./walette-issuer/certs:/app/certs
+
+  holder:
+    build: ./walette-holder
+    ports:
+      - "8051:8000"
+    depends_on:
+      - postgres
+
+  verifier:
+    build: ./walette-verifier
+    ports:
+      - "8052:8000"
+    volumes:
+      - ./walette-issuer/certs/ca.cert.pem:/app/trusted_root.pem
+
+  dummyapp:
+    build: ./dummy-app
+    ports:
+      - "8053:8000"
+    depends_on:
+      - verifier
+      - holder
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: walette
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
