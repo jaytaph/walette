@@ -1,2 +1,2 @@
 /walette-issuer/certs/*
-__pycache__/*
+**/__pycache__/*
