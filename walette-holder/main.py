@@ -13,58 +13,76 @@ from models import CreateDIDRequest, AddCredentialRequest
 from presentation import create_vp_jwt
 from storage import init_db, list_credentials, init_did_table, list_dids, \
     store_did, store_credential_with_label, get_credential_by_label, get_did_keypair_by_label
+from urllib.parse import urlparse, parse_qs
 
 app = FastAPI()
 init_db()
 init_did_table()
 
-@app.post("/credentials")
-def add_credential(req: AddCredentialRequest):
-    try:
-        cred_id = store_credential_with_label(req.label, req.jwt)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to store: {str(e)}")
-    return {"status": "stored", "id": cred_id}
-
-@app.get("/credentials")
-def get_credentials():
-    return list_credentials()
-
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/present", response_class=HTMLResponse)
-def select_credential(request: Request):
-    offer_uri = request.query_params.get("credential_offer_uri")
-    state = request.query_params.get("state")
 
-    creds = list_credentials()  # returns [{"label": ..., "jwt": ...}]
-    dids = list_dids()          # returns [{"label": ..., "did": ..., "public_jwk": ...}]
+@app.get("/", response_class=HTMLResponse)
+async def openid4vp_form(request: Request):
+    return templates.TemplateResponse("entry.html", {
+        "request": request,
+    })
+
+@app.post("/wallet/openid4vp", response_class=HTMLResponse)
+async def handle_openid4vp_post(request: Request, raw_uri: str = Form(...)):
+    # Parse the `openid4vp://?request_uri=...` URI
+    parsed = urlparse(raw_uri)
+    if parsed.scheme != "openid4vp":
+        return HTMLResponse("Invalid scheme in URI", status_code=400)
+
+    qs = parse_qs(parsed.query)
+    request_uri = qs.get("request_uri", [None])[0]
+    if not request_uri:
+        return HTMLResponse("Missing request_uri in link", status_code=400)
+
+    async with httpx.AsyncClient() as client:
+        r = await client.get(request_uri)
+        data = r.json()
+
+    creds = list_credentials()
+    dids = list_dids()
 
     return templates.TemplateResponse("select.html", {
         "request": request,
-        "credential_offer_uri": offer_uri,
-        "state": state,
+        "request_uri": request_uri,
         "credentials": creds,
         "dids": dids
     })
 
-@app.post("/present")
-async def handle_presentation(
+@app.post("/wallet/respond")
+async def handle_response(
     credential_label: str = Form(...),
     holder_label: str = Form(...),
-    credential_offer_uri: str = Form(...),
-    state: str = Form(...)
+    request_uri: str = Form(...),
 ):
-    # Parse offer URI
-    offer_json = base64.urlsafe_b64decode(credential_offer_uri + '===').decode()
-    offer = json.loads(offer_json)
 
-    audience = offer.get("client_id") or offer.get("credential_issuer")
-    nonce = offer.get("nonce")
+    # Fetch the presentation request from the verifier
+    async with httpx.AsyncClient() as client:
+        r = await client.get(request_uri)
+        if r.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to fetch request_uri")
+        req_data = r.json()
 
+    redirect_uri = req_data.get("redirect_uri")
+    if not redirect_uri:
+        raise HTTPException(status_code=400, detail="Missing redirect_uri")
+
+    audience = "https://verifier.example.org"
+    # audience = req_data.get("client_id") or req_data.get("audience") or redirect_uri
+    nonce = req_data.get("nonce")
+
+
+    # Load user-selected credential and DID
     vc_jwt = get_credential_by_label(credential_label)
     did = get_did_keypair_by_label(holder_label)
 
+
+    # Create the signed VP
     vp_jwt = create_vp_jwt(
         holder_did=did["did"],
         private_jwk=did["private_jwk"],
@@ -73,8 +91,10 @@ async def handle_presentation(
         nonce=nonce
     )
 
+
+    # Send to verifier /openid4vp/callback
     async with httpx.AsyncClient() as client:
-        resp = await client.post("http://verifier:8000/verify", json={"vp_jwt": vp_jwt})
+        resp = await client.post("http://localhost:8052/openid4vp/callback", json={"vp_jwt": vp_jwt})
         if resp.status_code != 200:
             raise HTTPException(status_code=401, detail=f"Verifier rejected presentation {resp.text}")
 
@@ -82,9 +102,9 @@ async def handle_presentation(
         if not user_info:
             raise HTTPException(status_code=500, detail="No user_info returned from verifier")
 
-        # Pass user_info to dummy app (serialize as base64 JSON)
+        # Redirect to dummy app with result
         payload = base64.urlsafe_b64encode(json.dumps(user_info).encode()).decode()
-        return RedirectResponse(f"http://localhost:8053/callback?data={payload}")
+        return RedirectResponse(f"{redirect_uri}?data={payload}")
 
 @app.post("/dids")
 def create_did(req: CreateDIDRequest):
@@ -100,7 +120,18 @@ def create_did(req: CreateDIDRequest):
         "private_jwk": result["private_jwk"]
     }
 
-
 @app.get("/dids")
 def get_dids():
     return list_dids()
+
+@app.post("/credentials")
+def add_credential(req: AddCredentialRequest):
+    try:
+        cred_id = store_credential_with_label(req.label, req.jwt)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to store: {str(e)}")
+    return {"status": "stored", "id": cred_id}
+
+@app.get("/credentials")
+def get_credentials():
+    return list_credentials()
