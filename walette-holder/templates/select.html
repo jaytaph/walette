@@ -1,25 +1,28 @@
-<h2>Select Credential and DID to Present</h2>
-<form method="post" action="/present">
-  <input type="hidden" name="credential_offer_uri" value="{{ credential_offer_uri }}">
-  <input type="hidden" name="state" value="{{ state }}">
+<h2 style="font-family: Arial, sans-serif; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Select Credential and DID to Present</h2>
+<form method="post" action="/wallet/respond" style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1)">
+  <input type="hidden" name="request_uri" value="{{ request_uri }}">
 
-  <label>Credential:</label>
-  <select name="credential_label">
-    {% for cred in credentials %}
-    <option value="{{ cred.label }}">
-      {{ cred.label }}
-    </option>
-    {% endfor %}
-  </select>
+  <div style="margin-bottom: 15px;">
+    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Credential:</label>
+    <select name="credential_label" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white;">
+      {% for cred in credentials %}
+      <option value="{{ cred.label }}">
+        {{ cred.label }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
 
-  <label>DID:</label>
-  <select name="holder_label">
-    {% for did in dids %}
-    <option value="{{ did.label }}">
-      {{ did.label }}
-    </option>
-    {% endfor %}
-  </select>
+  <div style="margin-bottom: 20px;">
+    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">DID:</label>
+    <select name="holder_label" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: white;">
+      {% for did in dids %}
+      <option value="{{ did.label }}">
+        {{ did.label }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
 
-  <button type="submit">Submit Presentation</button>
+  <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%;">Submit Presentation</button>
 </form>

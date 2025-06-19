@@ -1,0 +1,45 @@
+<h2 style="font-family: Arial, sans-serif; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">Walette proof of concept v0.0.1</h2>
+<form method="post" action="/wallet/openid4vp" style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 10px; align-items: center;">
+
+  <input
+    type="text"
+    name="raw_uri"
+    style="
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 0;
+    "
+    placeholder="Enter OIDC4VP request URI here..."
+  />
+
+  <button
+    type="submit"
+    style="
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      white-space: nowrap;
+      transition: background-color 0.3s;
+    "
+  >
+    Load Request
+  </button>
+</form>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<ul>
+  <li><a href="/dids">See all DIDs</a>
+  <li><a href="/credentials">See all Credentials</a>
+</ul>
+

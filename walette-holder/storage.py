@@ -52,7 +52,8 @@ def list_credentials():
                         types = [types]
                     subject = vc.get("credentialSubject", [{}])[0].get("id", "unknown")
                     issuer = payload.get("iss", "unknown")
-                except Exception:
+                except Exception as e:
+                    print(f"Error parsing JWT {label}: {e}")
                     types = ["invalid"]
                     subject = "error"
                     issuer = "error"
